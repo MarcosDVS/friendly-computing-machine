@@ -2,6 +2,8 @@
 
 > **Motora** es una aplicación móvil nativa multiplataforma (Android & iOS) diseñada bajo la arquitectura **Offline-First**. Permite a dueños de automóviles y motocicletas gestionar historiales de mantenimiento, controlar el consumo de combustible y recibir alertas sobre vencimientos de documentos legales, garantizando pleno funcionamiento sin conexión a internet y respaldo automático en la nube.
 
+<img width="1254" height="1254" alt="image" src="https://github.com/user-attachments/assets/01da70a2-1ef7-49bc-8ac1-bf3ae0452726" />
+
 ---
 
 ## 📸 Capturas de Pantalla
