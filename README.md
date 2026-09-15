@@ -1,17 +1,15 @@
-# 🚗🏍️ Motora - Vehicle Maintenance & Fuel Tracker
+ # 🚗🏍️ Motora - Vehicle Maintenance & Fuel Tracker
 
-> **Motora** es una aplicación móvil nativa multiplataforma (Android & iOS) diseñada bajo la arquitectura **Offline-First**. Permite a dueños de automóviles y motocicletas gestionar historiales de mantenimiento, controlar el consumo de combustible y recibir alertas sobre vencimientos de documentos legales, garantizando pleno funcionamiento sin conexión a internet y respaldo automático en la nube.
-
+> **Motora** es una aplicación móvil nativa multiplataforma (Android & iOS) desarrollada en **.NET 8 / .NET MAUI Blazor Hybrid** bajo la arquitectura **Offline-First**. Permite a propietarios de automóviles y motocicletas gestionar historiales de mantenimiento con intervalos 100% personalizables por vehículo, controlar consumos de combustible y supervisar vencimientos de documentos.
 <img width="1254" height="1254" alt="image" src="https://github.com/user-attachments/assets/01da70a2-1ef7-49bc-8ac1-bf3ae0452726" />
-
 ---
 
 ## 📸 Capturas de Pantalla
-*(Agrega aquí las capturas de pantalla de la app en ejecución)*
+*(Imágenes demostrativas de la aplicación)*
 
-| Dashboard | Mantenimientos | Consumo Combustible |
+| Dashboard | Nuevo Mantenimiento | Ajuste de Intervalos por Vehículo |
 |:---:|:---:|:---:|
-| `![Dashboard](link-imagen)` | `![Mantenimientos](link-imagen)` | `![Combustible](link-imagen)` |
+| `![Dashboard](link-imagen)` | `![Mantenimientos](link-imagen)` | `![Configuracion](link-imagen)` |
 
 ---
 
@@ -29,157 +27,119 @@
 
 ## 🔄 Arquitectura Offline-First y Sincronización
 
-La aplicación sigue el patrón **Offline-First**, lo que significa que el usuario interactúa **siempre** con la base de datos local SQLite. Esto asegura respuestas instantáneas y cero dependencia de una conexión activa a internet.
+La aplicación opera prioritariamente contra la base de datos local **SQLite**, permitiendo funcionalidad completa sin conexión a internet. Al detectar red, el servicio de sincronización replica los cambios en la nube (Supabase).
 
-
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                 App Móvil (UI Blazor)                   │
 └───────────────────────────┬─────────────────────────────┘
-│ (Lectura / Escritura directa)
-▼
+                            │ (Lectura / Escritura directa)
+                            ▼
 ┌─────────────────────────────────────────────────────────┐
 │               Base de Datos Local (SQLite)              │
 └───────────────────────────┬─────────────────────────────┘
-│
-Sync Engine (Background Service)
-[Detecta Internet mediante Maui.Connectivity]
-│
-▼
-┌─────────────────────────────────────────────────────────┘
+                            │
+              Sync Engine (Background Service)
+              [Detecta Internet mediante Maui.Connectivity]
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
 │                 Nube / Backend (Supabase)               │
-└─────────────────────────────────────────────────────────┘
+└───────────────────────────┬─────────────────────────────┘
 
-### Reglas del Motor de Sincronización (Sync Engine):
-1. **Escritura Local:** Toda inserción, edición o eliminación física se guarda localmente en SQLite.
-2. **Cola de Cambios:** Los registros modificados se marcan con `IsSynced = false` y `UpdatedAt = UtcNow`.
-3. **Sincronización Push (Subida):** Al detectar red, el servicio en segundo plano envía todos los registros con `IsSynced == false` al servidor y los marca como `IsSynced = true`.
-4. **Sincronización Pull (Descarga):** Al iniciar sesión en un dispositivo nuevo o forzar sincronización, la app descarga del servidor todo registro con `UpdatedAt` posterior a la última sincronización.
-5. **Resolución de Conflictos:** Estrategia *Last Write Wins* (la edición con el `UpdatedAt` más reciente en UTC prevalece).
-
----
-
-## 🗄️ Modelo de Datos (Entidades y Propiedades)
-
-Todas las entidades heredan de una clase base común (`BaseEntity`) que soporta la lógica de sincronización offline.
-
-### 0. BaseEntity (Clase Base)
+⚙️ Reglas de Negocio Automatizadas
+ * Configuración Inicial de Intervalos: Al registrar un vehículo (Automovil o Motocicleta), la app le asigna una plantilla de intervalos predeterminados según su categoría.
+ * Personalización por Vehículo (Modificación del Usuario): El usuario puede ingresar a la sección de Ajustes de Intervalos de su vehículo (ej. su motocicleta) y cambiar la frecuencia de cualquier servicio (por ejemplo, cambiar el Cambio de Aceite de 2,000 km por defecto a 5,000 km si así lo requiere el manual del fabricante).
+ * Cálculo Automático Dinámico: Cada vez que el usuario registra un nuevo mantenimiento para ese vehículo, la app consulta la regla configurada para ese servicio específico y calcula el próximo kilometraje:
+   
+ * Edición Puntual: En el formulario de registro de mantenimiento, el valor sugerido en ProximoKilometraje permanece editable por si el usuario desea un ajuste excepcional en ese servicio en particular.
+ * Actualización del Odómetro: Si el kilometraje ingresado en un mantenimiento o repostaje supera el KilometrajeActual del vehículo, el odómetro general del vehículo se actualiza automáticamente en SQLite.
+🗄️ Modelo de Datos (Entidades)
+0. BaseEntity
 | Propiedad | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `Id` | `Guid` | Identificador único universal (generado localmente en el cliente). |
-| `UserId` | `Guid` | ID del usuario propietario del registro. |
-| `CreatedAt` | `DateTimeOffset` | Fecha y hora de creación (UTC). |
-| `UpdatedAt` | `DateTimeOffset` | Fecha y hora de última modificación (UTC). |
-| `IsSynced` | `bool` | Marca si el registro ya fue replicado en la nube. |
-| `IsDeleted` | `bool` | Borrado lógico (Soft delete) para replicar eliminaciones en la nube. |
-
----
-
-### 1. Vehiculo
-Representa los vehículos registrados por el usuario (autos o motocicletas).
-
+|---|---|---|
+| Id | Guid | Identificador único universal. |
+| UserId | Guid | ID del usuario propietario. |
+| CreatedAt | DateTimeOffset | Fecha de creación (UTC). |
+| UpdatedAt | DateTimeOffset | Fecha de modificación (UTC). |
+| IsSynced | bool | Estado de sincronización. |
+| IsDeleted | bool | Borrado lógico (Soft Delete). |
+1. Vehiculo
 | Propiedad | Tipo | Requerido | Descripción |
-| :--- | :--- | :---: | :--- |
-| `Tipo` | `TipoVehiculoEnum` | Si | Enum: `Automovil` o `Motocicleta`. |
-| `Marca` | `string` | Si | Marca del vehículo (ej. Honda, Yamato, Toyota). |
-| `Modelo` | `string` | Si | Modelo (ej. Civic, CG150, Sonic). |
-| `Anio` | `int` | Si | Año de fabricación. |
-| `Placa` | `string` | No | Matrícula/Placa de identificación. |
-| `KilometrajeActual` | `double` | Si | Odómetro actual del vehículo. |
-| `UnidadMedida` | `UnidadMedidaEnum` | Si | Enum: `Kilometros` o `Millas`. |
-| `Mantenimientos` | `ICollection<Mantenimiento>` | - | Relación 1:N con mantenimientos. |
-| `RegistrosCombustible`| `ICollection<Combustible>` | - | Relación 1:N con lecturas de combustible. |
-| `Documentos` | `ICollection<Documento>` | - | Relación 1:N con documentos legales. |
-
----
-
-### 2. Mantenimiento
-Historial y programación de servicios técnicos.
-
+|---|---|---|---|
+| Tipo | TipoVehiculoEnum | Si | Enum: Automovil o Motocicleta. |
+| Marca | string | Si | Marca del vehículo. |
+| Modelo | string | Si | Modelo. |
+| Anio | int | Si | Año de fabricación. |
+| Placa | string | No | Placa/Matrícula. |
+| KilometrajeActual | double | Si | Lectura actual del odómetro. |
+| UnidadMedida | UnidadMedidaEnum | Si | Enum: Kilometros o Millas. |
+| IntervalosServicio | ICollection<IntervaloServicio> | - | Reglas de frecuencia de mantenimiento del vehículo. |
+2. IntervaloServicio (Reglas Personalizadas del Vehículo)
+Guarda la frecuencia en kilómetros que el usuario ha definido para cada servicio de un vehículo en particular.
 | Propiedad | Tipo | Requerido | Descripción |
-| :--- | :--- | :---: | :--- |
-| `VehiculoId` | `Guid` | Si | Clave foránea referenciando a `Vehiculo`. |
-| `Titulo` | `string` | Si | Breve descripción (ej. Cambio de Aceite, Frenos). |
-| `KilometrajeRealizado`| `double` | Si | Kilometraje en el que se realizó el servicio. |
-| `ProximoKilometraje` | `double?` | No | Kilometraje estimado para el próximo servicio. |
-| `FechaRealizado` | `DateTime` | Si | Fecha de ejecución del mantenimiento. |
-| `ProximaFecha` | `DateTime?` | No | Fecha límite estimada para el próximo servicio. |
-| `CostoTotal` | `decimal` | Si | Costo total invertido. |
-| `Taller` | `string` | No | Nombre del centro de servicio o taller. |
-| `Notas` | `string` | No | Observaciones técnicas o piezas utilizadas. |
-
----
-
-### 3. Combustible
-Seguimiento de recargas de combustible y rendimiento del vehículo.
-
+|---|---|---|---|
+| VehiculoId | Guid | Si | Clave foránea referenciando a Vehiculo. |
+| TipoServicio | string | Si | Nombre del servicio (ej. "Cambio de Aceite", "Frenos"). |
+| IntervaloKilometros | double | Si | Frecuencia en KM establecida por el usuario (ej. 5,000 km). |
+3. Mantenimiento
 | Propiedad | Tipo | Requerido | Descripción |
-| :--- | :--- | :---: | :--- |
-| `VehiculoId` | `Guid` | Si | Clave foránea referenciando a `Vehiculo`. |
-| `Fecha` | `DateTime` | Si | Fecha de la recarga. |
-| `KilometrajeRecorrido`| `double` | Si | Lectura del odómetro al momento de repostar. |
-| `Cantidad` | `double` | Si | Cantidad de galones/litros recargados. |
-| `CostoTotal` | `decimal` | Si | Monto total pagado. |
-| `TanqueLleno` | `bool` | Si | Indica si se llenó el tanque (necesario para cálculo exacto de consumo). |
-| `ConsumoPromedio` | `double?` | No | Calculado automáticamente (ej. KM/Galón o L/100km). |
-
----
-
-### 4. Documento
-Control y alertas de vencimiento de documentos legales.
-
+|---|---|---|---|
+| VehiculoId | Guid | Si | Clave foránea de Vehiculo. |
+| Titulo | string | Si | Servicio realizado (ej. "Cambio de Aceite"). |
+| KilometrajeRealizado | double | Si | Odómetro al momento del servicio. |
+| ProximoKilometraje | double? | No | Autocalculado: KilometrajeRealizado + IntervaloKilometros del vehículo. |
+| FechaRealizado | DateTime | Si | Fecha de ejecución. |
+| ProximaFecha | DateTime? | No | Fecha límite estimada para el próximo servicio. |
+| CostoTotal | decimal | Si | Costo del servicio. |
+| Taller | string | No | Nombre del taller/centro de servicio. |
+| Notas | string | No | Notas u observaciones adicionales. |
+4. Combustible
 | Propiedad | Tipo | Requerido | Descripción |
-| :--- | :--- | :---: | :--- |
-| `VehiculoId` | `Guid` | Si | Clave foránea referenciando a `Vehiculo`. |
-| `TipoDocumento` | `TipoDocumentoEnum` | Si | Enum: `Seguro`, `InspeccionTecnica`, `Licencia`, `Otro`. |
-| `NumeroDocumento` | `string` | No | Número de póliza, registro o carné. |
-| `FechaEmision` | `DateTime` | Si | Fecha de expedición del documento. |
-| `FechaVencimiento` | `DateTime` | Si | Fecha en la que caduca el documento. |
-| `AlertaDiasAntes` | `int` | Si | Días de anticipación para notificar al usuario (ej. 15 días). |
-
----
-
-## 📁 Estructura del Proyecto
-
-```text
+|---|---|---|---|
+| VehiculoId | Guid | Si | Clave foránea de Vehiculo. |
+| Fecha | DateTime | Si | Fecha de la recarga. |
+| KilometrajeRecorrido | double | Si | Lectura del odómetro. |
+| Cantidad | double | Si | Galones/Litros. |
+| CostoTotal | decimal | Si | Monto total. |
+| TanqueLleno | bool | Si | Indica si se llenó el tanque. |
+| ConsumoPromedio | double? | No | Rendimiento autocalculado (KM/Galón). |
+5. Documento
+| Propiedad | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| VehiculoId | Guid | Si | Clave foránea de Vehiculo. |
+| TipoDocumento | TipoDocumentoEnum | Si | Enum: Seguro, InspeccionTecnica, Licencia, Otro. |
+| NumeroDocumento | string | No | Número de póliza o registro. |
+| FechaEmision | DateTime | Si | Fecha de emisión. |
+| FechaVencimiento | DateTime | Si | Fecha de caducidad. |
+| AlertaDiasAntes | int | Si | Anticipación para notificación local. |
+📁 Estructura del Proyecto
 src/
 ├── Application/
-│   ├── Components/          # Vistas y UI en Blazor (Razor Pages & Components)
+│   ├── Components/          # Vistas Blazor (MantenimientoForm, IntervaloConfig, Dashboard)
 │   ├── Data/
-│   │   ├── AppDbContext.cs  # Configuración de EF Core SQLite
-│   │   ├── Entities/        # Clases C# de las entidades (Vehiculo, Mantenimiento, etc.)
-│   │   └── Migrations/      # Migraciones de base de datos SQLite
+│   │   ├── AppDbContext.cs  # Configuración EF Core SQLite
+│   │   ├── Entities/        # Entidades (Vehiculo, IntervaloServicio, Mantenimiento, etc.)
+│   │   └── Migrations/      # Migraciones SQLite
 │   ├── Services/
-│   │   ├── Auth/            # Servicio de Autenticación de Usuarios
-│   │   ├── Sync/            # Motor de Sincronización Offline-First (Sync Engine)
-│   │   ├── Data/            # Repositorios de datos locales (CRUD en SQLite)
-│   │   └── Notification/    # Manejo de alertas y notificaciones locales nativas
-│   └── Platforms/           # Implementaciones nativas para Android e iOS
+│   │   ├── Sync/            # Motor de Sincronización Offline-First
+│   │   ├── Data/            # Repositorios CRUD
+│   │   └── Calculators/     # Calculadora basada en reglas personalizadas por vehículo
+│   └── Platforms/           # Implementación nativa Android / iOS
 └── README.md
 
-🚀 Configuración e Instalación
-Requisitos Previos
- * .NET 8 SDK instalado.
- * Visual Studio 2022 (versión 17.8 o superior) con la carga de trabajo .NET Multi-platform App UI development.
- * Emulador de Android o dispositivo físico configurado en modo depuración.
-Pasos para Ejecutar
+🚀 Instalación y Ejecución
  * Clonar el repositorio:
-   git clone [https://github.com/tu-usuario/nombre-de-tu-repo.git](https://github.com/tu-usuario/nombre-de-tu-repo.git)
+   git clone [https://github.com/tu-usuario/motora-app.git](https://github.com/tu-usuario/motora-app.git)
 
- * Abrir la solución .sln en Visual Studio 2022.
- * Restaurar los paquetes NuGet:
+ * Abrir en Visual Studio 2022 con la carga de trabajo .NET MAUI.
+ * Restaurar paquetes NuGet:
    dotnet restore
 
- * Aplicar migraciones iniciales a SQLite (si aplica):
-   dotnet ef database update
+ * Ejecutar en Emulador o Dispositivo Físico.
 
- * Seleccionar el dispositivo/emulador de destino (Android/iOS) y presionar F5 para depurar.
-📄 Licencia
-Este proyecto está bajo la Licencia MIT - consulta el archivo LICENSE para más detalles.
-
----
-
-<ElicitationsGroup message="¿Deseas que profundicemos en algún apartado del README?">
-  <Elicitation label="Generar la clase BaseEntity y DbContext en C#" query="Escribe el código en C# para la clase BaseEntity y el AppDbContext de Entity Framework Core para SQLite."/>
-  <Elicitation label="Crear los enums e interfaces del proyecto en C#" query="Muéstrame la definición de los enums y las interfaces del repositorio de datos para este README en C#."/>
+<ElicitationsGroup message="¿Qué paso deseas dar ahora?">
+  <Elicitation label="Escribir el código del componente AjusteIntervalos.razor" query="Escribe el código HTML/C# del componente Blazor AjusteIntervalos.razor para gestionar los intervalos de un vehículo."/>
+  <Elicitation label="Escribir las migraciones de Entity Framework Core" query="Genera el código de C# para las clases de entidad actualizadas y la configuración en AppDbContext.cs."/>
 </ElicitationsGroup>
 
