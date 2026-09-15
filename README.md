@@ -1,7 +1,6 @@
-Aquí tienes una estructura profesional y detallada para el archivo README.md de tu repositorio en GitHub. Está listo para que lo copies, adaptes el nombre definitivo de tu app y lo publiques en tu repositorio.
-# 🚗🏍️ [NombreDeTuApp] - Vehicle Maintenance & Fuel Tracker
+# 🚗🏍️ Motora - Vehicle Maintenance & Fuel Tracker
 
-> **[NombreDeTuApp]** es una aplicación móvil nativa multiplataforma (Android & iOS) diseñada bajo la arquitectura **Offline-First**. Permite a dueños de automóviles y motocicletas gestionar historiales de mantenimiento, controlar el consumo de combustible y recibir alertas sobre vencimientos de documentos legales, garantizando pleno funcionamiento sin conexión a internet y respaldo automático en la nube.
+> **Motora** es una aplicación móvil nativa multiplataforma (Android & iOS) diseñada bajo la arquitectura **Offline-First**. Permite a dueños de automóviles y motocicletas gestionar historiales de mantenimiento, controlar el consumo de combustible y recibir alertas sobre vencimientos de documentos legales, garantizando pleno funcionamiento sin conexión a internet y respaldo automático en la nube.
 
 ---
 
