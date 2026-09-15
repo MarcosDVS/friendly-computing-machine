@@ -46,7 +46,7 @@ La aplicación opera prioritariamente contra la base de datos local **SQLite**, 
 ┌─────────────────────────────────────────────────────────┐
 │                 Nube / Backend (Supabase)               │
 └───────────────────────────┬─────────────────────────────┘
-
+```
 ⚙️ Reglas de Negocio Automatizadas
  * Configuración Inicial de Intervalos: Al registrar un vehículo (Automovil o Motocicleta), la app le asigna una plantilla de intervalos predeterminados según su categoría.
  * Personalización por Vehículo (Modificación del Usuario): El usuario puede ingresar a la sección de Ajustes de Intervalos de su vehículo (ej. su motocicleta) y cambiar la frecuencia de cualquier servicio (por ejemplo, cambiar el Cambio de Aceite de 2,000 km por defecto a 5,000 km si así lo requiere el manual del fabricante).
